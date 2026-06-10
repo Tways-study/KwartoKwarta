@@ -1,0 +1,116 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/*
+  KwartoKwarta design system — "a warm paper ledger meets a peso fintech".
+  Single, deliberate warm-light theme. Cream paper, warm ink, marigold/peso-gold
+  primary, teal credits / terracotta debits, receipt-style dashed tear lines.
+*/
+
+@theme {
+  /* Palette */
+  --color-paper: #f6f1e7;
+  --color-paper-deep: #efe7d6;
+  --color-surface: #fffdf8;
+  --color-ink: #211c16;
+  --color-ink-soft: #4b4035;
+  --color-muted: #8a7c6a;
+  --color-line: #e6dac4;
+  --color-line-strong: #d8c8aa;
+
+  --color-gold: #e08a23;
+  --color-gold-deep: #c4711a;
+  --color-gold-soft: #f6e2bf;
+
+  --color-credit: #2f7d5b; /* you are owed / positive */
+  --color-credit-soft: #d8ecdf;
+  --color-debit: #bf4a30; /* you owe / negative */
+  --color-debit-soft: #f4ddd3;
+
+  /* Category hues */
+  --color-cat-electric: #d98a1e;
+  --color-cat-water: #2c7fb8;
+  --color-cat-internet: #6b51c9;
+  --color-cat-grocery: #2f8f55;
+  --color-cat-rent: #b0472b;
+  --color-cat-cleaning: #1f9aa3;
+  --color-cat-other: #7c7064;
+
+  /* Fonts (wired via next/font in layout.tsx) */
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-sans: var(--font-hanken), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+
+  /* Radii */
+  --radius-card: 1.25rem;
+
+  /* Shadows — warm, soft, airy */
+  --shadow-card: 0 1px 2px rgba(33, 28, 22, 0.03),
+    0 8px 32px -12px rgba(33, 28, 22, 0.14);
+  --shadow-lift: 0 2px 4px rgba(33, 28, 22, 0.04),
+    0 24px 56px -20px rgba(33, 28, 22, 0.32);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    /* faint paper grain + warm top glow */
+    background-image: radial-gradient(
+        120% 80% at 50% -20%,
+        rgba(224, 138, 35, 0.1),
+        transparent 60%
+      ),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+    background-attachment: fixed;
+  }
+
+  /* Tabular, lined numerals for money everywhere */
+  .tnum {
+    font-feature-settings: "tnum" 1, "ss01" 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background: var(--color-gold-soft);
+    color: var(--color-ink);
+  }
+}
+
+@layer components {
+  /* Gentle float for decorative elements */
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+  }
+  .float {
+    animation: float 5s ease-in-out infinite;
+  }
+
+  /* Paper card with a hairline warm border */
+  .paper-card {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Receipt tear edge — a dashed rule used to separate ledger rows/sections */
+  .tear {
+    border-top: 1.5px dashed var(--color-line-strong);
+  }
+
+  /* Eyebrow / section label */
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+}

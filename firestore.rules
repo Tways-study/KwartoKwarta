@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuth() { return request.auth != null; }
+    function isHouseMember(houseId) {
+      return isAuth() &&
+        exists(/databases/$(database)/documents/houses/$(houseId)/members/$(request.auth.uid));
+    }
+
+    match /users/{uid} {
+      allow read: if isAuth();
+      allow write: if isAuth() && request.auth.uid == uid;
+    }
+
+    match /houses/{houseId} {
+      allow read: if isAuth();          // any signed-in user (invite-code lookup)
+      allow write: if false;            // server-only (Admin SDK)
+
+      match /members/{uid}        { allow read: if isHouseMember(houseId); allow write: if false; }
+      match /expenses/{expenseId} { allow read: if isHouseMember(houseId); allow write: if false; }
+      match /settlements/{sId}    { allow read: if isHouseMember(houseId); allow write: if false; }
+      match /recurring_bills/{bId}{ allow read: if isHouseMember(houseId); allow write: if false; }
+    }
+  }
+}
