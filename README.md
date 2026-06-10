@@ -1,85 +1,140 @@
-# KwartoKwarta
+# 🏠 KwartoKwarta
 
-A shared-expense ledger for boarding-house boardmates. Create or join a **house**
-with a 6-char invite code, log **expenses** with equal/custom splits, see live
-**balances**, and **settle** debts with the fewest payments. Built from
-[`REBUILD_GUIDE.md`](./REBUILD_GUIDE.md).
+An elegant, real-time shared-expense ledger tailored for roommates and boardmates. Create or join a house via a 6-character room code, log expenses with custom splits, track live balances, and settle debts in the fewest possible transactions.
 
-**Stack:** Next.js 16 (App Router, Turbopack) · React 19 · TypeScript · Tailwind
-v4 · Base UI · Firebase (Auth + Firestore) · Firebase Admin · Vercel-ready.
+---
 
-**Architecture:** reads are client-side Firestore `onSnapshot` listeners; **all
-writes** go through Next API routes using the Admin SDK (`verifyIdToken` → zod →
-Firestore transaction). The client never writes directly — security rules enforce
-`allow write: if false`.
+## ✨ Features
 
-## This build (Core MVP)
+*   **🏠 Household Collaboration:** Create a virtual house or join an existing one using a unique 6-character invite code (with built-in QR code generator for easy boarding).
+*   **💸 Smart Expense Splits:** Log house expenses with either equal splits or custom manual breakdowns. Assign specific categories like Rent, Grocery, Water, Electric, Internet, and Cleaning.
+*   **📊 Real-time Dashboard:** Real-time synchronization of member contributions, total spend, recent feeds, and monthly spend calendars.
+*   **🤝 Greedy Debt Simplification:** Built-in debt-simplification algorithm that matches the largest debtors against the largest creditors, ensuring everyone settles up with the absolute minimum number of transfers.
+*   **🔌 Secure & Resilient Architecture:** Real-time data streams client-side, combined with strict transaction-safe write protection on the server.
+*   **📱 Offline & Network Recovery:** Auto-detects offline status with warning banners and includes timeout guards to prevent infinite loading screens on poor networks.
 
-Included: Google + email/password auth, create/join house (with QR invite),
-dashboard (monthly overview, members + balances, expense feed, spend calendar),
-add expense (equal/custom split, category, date), settle up (simplified transfers
-+ history), leave house, offline/error/retry handling.
+---
 
-Deferred for a later pass: Gemini receipt scan, premium gating, recurring bills,
-monthly budget, and report export (PDF/CSV).
+## ⚡ Tech Stack
 
-## Setup
+| Tier | Technologies Used |
+| :--- | :--- |
+| **Framework** | Next.js 16 (App Router, Turbopack), React 19, TypeScript |
+| **Styling & UI** | Tailwind CSS v4, Base UI, Framer Motion, Lucide Icons, Sonner |
+| **Database & Auth** | Firebase Client SDK (Authentication, real-time Firestore listeners) |
+| **Server Operations** | Firebase Admin SDK (Next.js API Routes, transactions, token verification) |
+| **Integrations** | `qrcode.react` (sharing rooms), `date-fns` (time tracking) |
 
-1. **Firebase project** — in the [console](https://console.firebase.google.com):
-   - Authentication → enable **Google** and **Email/Password**.
-   - Firestore Database → create in **Native mode**.
-   - Register a **Web app**, copy its config.
-   - Project Settings → Service accounts → **Generate new private key** (Admin SDK).
-2. **Env vars** — `cp .env.local.example .env.local` and fill in. Mind the
-   [quoting rules](./REBUILD_GUIDE.md#7-environment-variables): no quotes on the
-   `NEXT_PUBLIC_*` values; wrap `FIREBASE_ADMIN_PRIVATE_KEY` in double quotes to
-   preserve `\n`.
-3. **Install & run:**
+---
 
-   ```bash
-   npm install
-   npm run dev        # http://localhost:3000
-   npm run build      # production build (Turbopack)
-   npm run lint
-   ```
+## 🏗️ Architecture
 
-4. **Deploy rules:** `firebase deploy --only firestore:rules`
+KwartoKwarta uses a secure, decoupled hybrid database model to enforce data integrity and prevent fraudulent client writes:
 
-> Without `.env.local`, `npm run build` and `npm run lint` still pass (Firebase
-> initializes in the browser only). The app needs real credentials to run.
+1.  **Reads (Real-time):** The client web application establishes read-only Firestore listeners (`onSnapshot`) to immediately reflect changes in balances or expenses.
+2.  **Writes (Privileged & Transactional):** The client **never** writes to the database directly. All mutations (creating rooms, logging expenses, recording settlements) go through Next.js API endpoints. The server verifies the user's ID token, validates the payloads using Zod, and executes Firestore transactions to guarantee that running balances remain accurate.
 
-## Production checklist (do not skip — see REBUILD_GUIDE §9)
+```
+                  ┌──────────────────────────────────────────────┐
+                  │                 Browser                      │
+                  │  (Firebase Client SDK / Real-time Listeners) │
+                  └──────┬──────────────────────────────▲────────┘
+                         │                              │
+                1. API Requests (Bearer Token)  2. Live Updates (onSnapshot)
+                         │                              │
+                         ▼                              │
+                  ┌────────────────────────┐            │
+                  │  Next.js API Routes    │            │
+                  │  (Firebase Admin SDK)  │            │
+                  └──────┬─────────────────┘            │
+                         │                              │
+             3. Transactional Write             │
+                         │                              │
+                         ▼                              │
+                  ┌─────────────────────────────────────┴────────┐
+                  │             Cloud Firestore                  │
+                  │     (Rules: allow write: if false)           │
+                  └──────────────────────────────────────────────┘
+```
 
-The original app worked on localhost but broke in production with infinite
-"Loading…" and `auth/invalid-credential`. Root cause was **API-key restrictions
-+ domain authorization** — pure config. Before calling a deploy done:
+---
 
-- [ ] **API key referrers** (Google Cloud → Credentials → Browser key) include the
-      prod domain (`https://<app>.vercel.app/*`), custom domain, and
-      `http://localhost:3000/*`.
-- [ ] **API restrictions** allow Cloud Firestore API, Identity Toolkit API, Token
-      Service API.
-- [ ] **Authorized domains** (Firebase → Auth → Settings) include the prod domain.
-- [ ] All six `NEXT_PUBLIC_FIREBASE_*` set in Vercel **Production**, no quotes/spaces.
-- [ ] **Redeploy after any env change** (`NEXT_PUBLIC_*` is build-time inlined);
-      prefer "Redeploy without build cache".
-- [ ] Firestore exists in Native mode and **rules are deployed**.
+## 🗄️ Firestore Data Model
 
-## Manual smoke test (once credentials exist)
+The Firestore database uses a structured set of root collections and subcollections to manage room scopes and memberships:
 
-Sign in → create a house → copy the invite code → (second account) join with the
-code → add an expense split equally → confirm both balances update live → open
-**Settle up** and record the suggested payment → confirm balances zero out and the
-settlement appears in history.
+### Root Collections
+*   `/users/{uid}`: Keeps track of user profiles and active room memberships (`houseId`).
+*   `/houses/{houseId}`: Main house metadata (invite code, creator, and total member count).
 
-## Key files
+### Subcollections under `/houses/{houseId}`
+*   `/members/{uid}`: Holds denormalized profiles and live running ledger balances (`totalPaid`, `totalOwed`, `balance`).
+*   `/expenses/{expenseId}`: Stores expense records containing splits mapping (which user owes what), paid-by references, and categories.
+*   `/settlements/{settlementId}`: A historical ledger tracking transactions made between boardmates to pay off balances.
 
-- `lib/firebase/client.ts` — browser-only init, forced long-polling +
-  single-tab persistence, throw-on-missing-config.
-- `lib/firebase/admin.ts` — lazy Admin SDK init.
-- `lib/hooks/firestore.ts` — listener hooks with 10s timeout + `fromCache`
-  not-found guard (§10.1).
-- `lib/hooks/useActiveHouse.ts` — seeds the active house from localStorage before
-  navigation (§10.2).
-- `app/api/houses/route.ts` — create house, returns `{ houseId, inviteCode }`.
-- `firestore.rules` — member-only reads, server-only writes.
+---
+
+## 🚀 Getting Started
+
+### 1. Firebase Backend Setup
+
+1.  Create a project in the [Firebase Console](https://console.firebase.google.com).
+2.  Enable **Email/Password** and **Google** sign-in providers under **Authentication**.
+3.  Create a **Cloud Firestore** instance in **Native Mode**.
+4.  Navigate to **Project Settings** → **General** and register a **Web app** to obtain your client SDK configuration.
+5.  Navigate to **Project Settings** → **Service Accounts** and click **Generate new private key** to obtain the service account credentials for the Admin SDK.
+
+### 2. Environment Configuration
+
+Create a `.env.local` file in the root of the project (using `.env.local.example` as a template):
+
+```env
+# Client Configuration (Safe to expose, compiled at build time)
+NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSy...
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-app.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-app
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-app.firebasestorage.app
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=1234567890
+NEXT_PUBLIC_FIREBASE_APP_ID=1:1234567890:web:abcdef
+
+# Server Configuration (Secrets, NEVER prefix with NEXT_PUBLIC_!)
+FIREBASE_ADMIN_PROJECT_ID=your-app
+FIREBASE_ADMIN_CLIENT_EMAIL=firebase-adminsdk-xxxx@your-app.iam.gserviceaccount.com
+FIREBASE_ADMIN_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC7...\n-----END PRIVATE KEY-----\n"
+```
+> ⚠️ **Important:** In your local `.env.local`, the server-side `FIREBASE_ADMIN_PRIVATE_KEY` must be wrapped in double quotes, and internal newlines should be written as `\n` literals.
+
+### 3. Deploy Firestore Rules
+
+Before running the application, deploy the read-only security rules so the client SDK can fetch data:
+
+```bash
+npx -y firebase-tools@latest deploy --only firestore:rules
+```
+
+### 4. Running the Development Server
+
+Installs dependencies and spins up the local Turbopack build server:
+
+```bash
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+---
+
+## 📦 Deployment (Vercel)
+
+1.  Connect your repository to **Vercel**.
+2.  Add all the variables from your `.env.local` to your Vercel Project Settings.
+    *   *Note:* In the Vercel dashboard, **do not** wrap your environment values in quotes.
+3.  Ensure you register your production domain under **Authorized Domains** in the Firebase Authentication console.
+4.  Configure HTTP referrer restrictions on your API key in the Google Cloud Console to allow your production domain URL.
+
+---
+
+## 🛠️ ~~Rebuild Blueprint~~
+
+~~This project was originally bootstrapped and documented in the [REBUILD_GUIDE.md](./REBUILD_GUIDE.md) before deployment. It is now treated as a fully built, ready-to-use production app.~~
