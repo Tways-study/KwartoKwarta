@@ -36,6 +36,7 @@ export interface UserDoc {
   email: string;
   photoURL: string | null;
   houseId: string | null;
+  premiumUntil?: FsTimestamp | null;
   createdAt: FsTimestamp;
 }
 
@@ -45,6 +46,7 @@ export interface HouseDoc {
   createdBy: string;
   createdAt: FsTimestamp;
   memberCount: number;
+  monthlyBudget?: number;
 }
 
 export interface MemberDoc {
@@ -80,9 +82,19 @@ export interface SettlementDoc {
   createdAt: FsTimestamp;
 }
 
+export interface RecurringBillDoc {
+  label: string;
+  amount: number;
+  cadence: "monthly";
+  splits: Record<string, number>; // uid -> share amount
+  category: ExpenseCategory;
+  createdAt: FsTimestamp;
+}
+
 /** Doc shapes as consumed by hooks (id + data). */
 export type WithId<T> = T & { id: string };
 export type House = WithId<HouseDoc>;
 export type Member = WithId<MemberDoc>;
 export type Expense = WithId<ExpenseDoc>;
 export type Settlement = WithId<SettlementDoc>;
+export type RecurringBill = WithId<RecurringBillDoc>;
