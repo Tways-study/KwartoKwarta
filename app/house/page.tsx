@@ -12,6 +12,7 @@ import {
   useHouse,
   useMembers,
   useSettlements,
+  useUserDoc,
 } from "@/lib/hooks/firestore";
 import { Wordmark } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ import { SettlementHistory } from "@/components/SettlementHistory";
 import { AddExpenseSheet } from "@/components/AddExpenseSheet";
 import { SettleSheet } from "@/components/SettleSheet";
 import { formatPHP } from "@/lib/utils/format";
+import { isPremium } from "@/lib/utils/premium";
 
 function CenteredSpinner() {
   return (
@@ -58,6 +60,7 @@ export default function DashboardPage() {
   const members = useMembers(houseId);
   const expenses = useExpenses(houseId);
   const settlements = useSettlements(houseId);
+  const userDoc = useUserDoc(user?.uid ?? null);
 
   const [addOpen, setAddOpen] = useState(false);
   const [settleOpen, setSettleOpen] = useState(false);
@@ -259,6 +262,7 @@ export default function DashboardPage() {
         onOpenChange={setAddOpen}
         members={members.data}
         meUid={user.uid}
+        isPremium={isPremium(userDoc.data?.premiumUntil)}
       />
       <SettleSheet
         open={settleOpen}

@@ -1,12 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useRef, useMemo, useState } from "react";
+import { Camera } from "lucide-react";
 import { toast } from "sonner";
 import { Sheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/field";
 import { Avatar } from "@/components/ui/avatar";
 import { Segmented } from "@/components/ui/segmented";
+import { Spinner } from "@/components/ui/spinner";
+import { PremiumSheet } from "@/components/PremiumSheet";
 import { CATEGORY_LIST } from "@/lib/categories";
 import type { ExpenseCategory, Member, SplitType } from "@/lib/firebase/schema";
 import { createExpenseSchema } from "@/lib/schemas/expense";
@@ -14,6 +17,14 @@ import { toDateInputValue } from "@/lib/utils/dates";
 import { formatPHP } from "@/lib/utils/format";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
+
+export interface ExpensePrefill {
+  description?: string;
+  amount?: string;
+  category?: ExpenseCategory;
+  splitType?: SplitType;
+  splits?: Record<string, string>; // uid -> string value for custom inputs
+}
 
 function equalSplits(amount: number, uids: string[]): Record<string, number> {
   const n = uids.length || 1;
@@ -32,11 +43,15 @@ export function AddExpenseSheet({
   onOpenChange,
   members,
   meUid,
+  isPremium,
+  prefill,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   members: Member[];
   meUid: string;
+  isPremium: boolean;
+  prefill?: ExpensePrefill | null;
 }) {
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
@@ -46,23 +61,24 @@ export function AddExpenseSheet({
   const [splitType, setSplitType] = useState<SplitType>("equal");
   const [custom, setCustom] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [premiumOpen, setPremiumOpen] = useState(false);
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const uids = useMemo(() => members.map((m) => m.uid), [members]);
 
-  // Reset to sensible defaults whenever the sheet transitions to open. This is
-  // the render-time "adjust state on prop change" pattern (the form lives in
-  // this always-mounted component, so it wouldn't reset on its own).
+  // Reset (or apply prefill) each time the sheet opens.
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
     setWasOpen(open);
     if (open) {
-      setDescription("");
-      setAmount("");
-      setCategory("grocery");
+      setDescription(prefill?.description ?? "");
+      setAmount(prefill?.amount ?? "");
+      setCategory(prefill?.category ?? "grocery");
+      setSplitType(prefill?.splitType ?? "equal");
+      setCustom(prefill?.splits ?? {});
       setPaidBy(meUid);
       setDate(toDateInputValue(new Date()));
-      setSplitType("equal");
-      setCustom({});
     }
   }
 
@@ -98,7 +114,6 @@ export function AddExpenseSheet({
       toast.error("Custom splits must add up to the total.");
       return;
     }
-
     setSubmitting(true);
     try {
       await api.addExpense(parsed.data);
@@ -111,24 +126,44 @@ export function AddExpenseSheet({
     }
   }
 
+  async function handleScanFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = ""; // reset so the same file can be picked again
+    setScanning(true);
+    try {
+      const result = await api.scanReceipt(file);
+      if (result.description) setDescription(result.description);
+      if (result.amount) setAmount(result.amount.toString());
+      if (result.category) setCategory(result.category);
+      if (result.date) setDate(result.date);
+      toast.success("Receipt scanned — review the details below.");
+    } catch {
+      toast.error("Couldn't read the receipt — fill it in manually.");
+    } finally {
+      setScanning(false);
+    }
+  }
+
   return (
-    <Sheet
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Add an expense"
-      description="Log a shared cost and we'll update everyone's balance."
-      footer={
-        <Button
-          variant="gold"
-          size="lg"
-          className="w-full"
-          onClick={submit}
-          disabled={submitting}
-        >
-          {submitting ? "Adding…" : `Add ${formatPHP(amountNum)}`}
-        </Button>
-      }
-    >
+    <>
+      <Sheet
+        open={open}
+        onOpenChange={onOpenChange}
+        title="Add an expense"
+        description="Log a shared cost and we'll update everyone's balance."
+        footer={
+          <Button
+            variant="gold"
+            size="lg"
+            className="w-full"
+            onClick={submit}
+            disabled={submitting}
+          >
+            {submitting ? "Adding…" : `Add ${formatPHP(amountNum)}`}
+          </Button>
+        }
+      >
       <div className="flex flex-col gap-6">
         <div>
           <Label htmlFor="amount">Amount</Label>
@@ -148,7 +183,39 @@ export function AddExpenseSheet({
         </div>
 
         <div>
-          <Label htmlFor="description">What for?</Label>
+          <div className="mb-1.5 flex items-center justify-between">
+            <Label htmlFor="description" className="mb-0">
+              What for?
+            </Label>
+            <button
+              type="button"
+              onClick={() => {
+                if (!isPremium) {
+                  setPremiumOpen(true);
+                  return;
+                }
+                fileInputRef.current?.click();
+              }}
+              disabled={scanning}
+              className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-muted transition hover:bg-paper-deep hover:text-ink disabled:opacity-50"
+              aria-label="Scan receipt"
+            >
+              {scanning ? (
+                <Spinner size={12} />
+              ) : (
+                <Camera className="h-3.5 w-3.5" />
+              )}
+              {scanning ? "Scanning…" : "Scan receipt"}
+            </button>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={handleScanFile}
+          />
           <Input
             id="description"
             placeholder="e.g. Meralco bill, palengke run"
@@ -296,5 +363,8 @@ export function AddExpenseSheet({
         </div>
       </div>
     </Sheet>
+
+      <PremiumSheet open={premiumOpen} onOpenChange={setPremiumOpen} />
+    </>
   );
 }
