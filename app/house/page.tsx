@@ -3,7 +3,16 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Check, Copy, Plus, Settings, HandCoins, LogOut, Home } from "lucide-react";
+import {
+  Check,
+  Copy,
+  HandCoins,
+  Home,
+  LogOut,
+  Plus,
+  Settings,
+  Sparkles,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useActiveHouse } from "@/lib/hooks/useActiveHouse";
@@ -11,23 +20,28 @@ import {
   useExpenses,
   useHouse,
   useMembers,
+  useRecurringBills,
   useSettlements,
   useUserDoc,
 } from "@/lib/hooks/firestore";
+import { isPremium as isPremiumFn } from "@/lib/utils/premium";
 import { Wordmark } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { LoadErrorScreen } from "@/components/LoadErrorScreen";
 import { MonthlyOverview } from "@/components/MonthlyOverview";
+import { BudgetCard } from "@/components/BudgetCard";
 import { MembersCard } from "@/components/MembersCard";
 import { ExpenseFeed } from "@/components/ExpenseFeed";
 import { ExpenseCalendar } from "@/components/ExpenseCalendar";
 import { SettlementHistory } from "@/components/SettlementHistory";
-import { AddExpenseSheet } from "@/components/AddExpenseSheet";
+import { RecurringBillsCard } from "@/components/RecurringBillsCard";
+import { ReportExportButton } from "@/components/ReportExportButton";
+import { AddExpenseSheet, type ExpensePrefill } from "@/components/AddExpenseSheet";
 import { SettleSheet } from "@/components/SettleSheet";
+import type { RecurringBill } from "@/lib/firebase/schema";
 import { formatPHP } from "@/lib/utils/format";
-import { isPremium } from "@/lib/utils/premium";
 
 function CenteredSpinner() {
   return (
@@ -56,13 +70,17 @@ export default function DashboardPage() {
   const active = useActiveHouse(user?.uid ?? null);
   const houseId = active.houseId;
 
+  const userDoc = useUserDoc(user?.uid ?? null);
   const house = useHouse(houseId);
   const members = useMembers(houseId);
   const expenses = useExpenses(houseId);
   const settlements = useSettlements(houseId);
-  const userDoc = useUserDoc(user?.uid ?? null);
+  const recurringBills = useRecurringBills(houseId);
+
+  const isPremium = isPremiumFn(userDoc.data?.premiumUntil);
 
   const [addOpen, setAddOpen] = useState(false);
+  const [expensePrefill, setExpensePrefill] = useState<ExpensePrefill | null>(null);
   const [settleOpen, setSettleOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -78,8 +96,7 @@ export default function DashboardPage() {
   if (active.noHouse) return <CenteredSpinner />;
   if (!houseId && !active.error) return <CenteredSpinner />;
 
-  const errored =
-    active.error || house.error || members.error || expenses.error;
+  const errored = active.error || house.error || members.error || expenses.error;
   if (errored && !house.data) {
     return (
       <LoadErrorScreen
@@ -108,6 +125,19 @@ export default function DashboardPage() {
     }
   }
 
+  function handleLogBill(bill: RecurringBill) {
+    setExpensePrefill({
+      description: bill.label,
+      amount: bill.amount.toString(),
+      category: bill.category,
+      splitType: "custom",
+      splits: Object.fromEntries(
+        Object.entries(bill.splits).map(([uid, amt]) => [uid, amt.toString()]),
+      ),
+    });
+    setAddOpen(true);
+  }
+
   const balanceColor = settled
     ? "var(--color-ink)"
     : balance > 0
@@ -124,7 +154,7 @@ export default function DashboardPage() {
     <div className="min-h-dvh">
       <OfflineBanner />
 
-      {/* Header — borderless, floating */}
+      {/* Header */}
       <header className="sticky top-0 z-20 bg-paper/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-5 sm:px-8 py-4">
           <Wordmark size="sm" className="hidden sm:inline-flex" />
@@ -147,7 +177,13 @@ export default function DashboardPage() {
               )}
             </button>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
+            {isPremium && (
+              <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-gold-soft/60 px-2.5 py-0.5 text-xs font-medium text-gold-deep">
+                <Sparkles className="h-3 w-3" />
+                Premium
+              </span>
+            )}
             <Link
               href="/house/settings"
               className="hidden sm:inline-flex h-9 w-9 items-center justify-center rounded-full text-muted transition hover:bg-paper-deep hover:text-ink"
@@ -168,9 +204,8 @@ export default function DashboardPage() {
       </header>
 
       <main className="mx-auto max-w-6xl px-5 sm:px-8 py-8 pb-28 sm:pb-12">
-        {/* Balance hero — full section, no card border */}
+        {/* Balance hero */}
         <section className="relative overflow-hidden rounded-[1.25rem] bg-surface px-7 py-10 sm:px-10 sm:py-14">
-          {/* Ambient glow */}
           <div
             className="pointer-events-none absolute -right-16 -top-20 h-72 w-72 rounded-full opacity-20 blur-3xl"
             style={{ background: glowColor }}
@@ -179,7 +214,6 @@ export default function DashboardPage() {
             className="pointer-events-none absolute -bottom-10 -left-10 h-48 w-48 rounded-full opacity-10 blur-3xl"
             style={{ background: glowColor }}
           />
-
           <p className="eyebrow relative">Your balance</p>
           <p
             className="tnum relative mt-3 font-display font-semibold leading-none tracking-tight"
@@ -197,13 +231,23 @@ export default function DashboardPage() {
                 ? "the house owes you, all in."
                 : "you owe the house, all in."}
           </p>
-
           <div className="relative mt-8 flex flex-wrap gap-3">
-            <Button variant="gold" size="lg" onClick={() => setAddOpen(true)}>
+            <Button
+              variant="gold"
+              size="lg"
+              onClick={() => {
+                setExpensePrefill(null);
+                setAddOpen(true);
+              }}
+            >
               <Plus className="h-4.5 w-4.5" />
               Add expense
             </Button>
-            <Button variant="outline" size="lg" onClick={() => setSettleOpen(true)}>
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => setSettleOpen(true)}
+            >
               <HandCoins className="h-4.5 w-4.5" />
               Settle up
             </Button>
@@ -212,12 +256,39 @@ export default function DashboardPage() {
 
         {/* Dashboard grid */}
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          {/* Left column */}
           <div className="flex flex-col gap-6">
             <MonthlyOverview expenses={expenses.data} meUid={user.uid} />
-            <ExpenseFeed expenses={expenses.data} meUid={user.uid} />
+            <BudgetCard
+              expenses={expenses.data}
+              budget={house.data.monthlyBudget}
+              isPremium={isPremium}
+            />
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <p className="eyebrow mb-0">Expenses</p>
+                <ReportExportButton
+                  expenses={expenses.data}
+                  members={members.data}
+                  meUid={user.uid}
+                  isPremium={isPremium}
+                  houseName={house.data.name}
+                />
+              </div>
+              <ExpenseFeed expenses={expenses.data} meUid={user.uid} />
+            </div>
           </div>
+
+          {/* Right column */}
           <div className="flex flex-col gap-6">
             <MembersCard members={members.data} meUid={user.uid} />
+            <RecurringBillsCard
+              bills={recurringBills.data}
+              members={members.data}
+              meUid={user.uid}
+              isPremium={isPremium}
+              onLogBill={handleLogBill}
+            />
             <ExpenseCalendar expenses={expenses.data} />
             <SettlementHistory
               settlements={settlements.data}
@@ -240,7 +311,10 @@ export default function DashboardPage() {
           <div className="-mt-6 flex flex-1 items-center justify-center">
             <button
               type="button"
-              onClick={() => setAddOpen(true)}
+              onClick={() => {
+                setExpensePrefill(null);
+                setAddOpen(true);
+              }}
               className="flex h-14 w-14 items-center justify-center rounded-full bg-gold-deep text-white shadow-lift transition active:scale-95"
               aria-label="Add expense"
             >
@@ -252,17 +326,23 @@ export default function DashboardPage() {
             className="flex flex-1 flex-col items-center gap-1 text-muted transition active:text-ink"
           >
             <Settings className="h-5 w-5" />
-            <span className="text-[10px] font-medium tracking-wide">Settings</span>
+            <span className="text-[10px] font-medium tracking-wide">
+              Settings
+            </span>
           </Link>
         </div>
       </nav>
 
       <AddExpenseSheet
         open={addOpen}
-        onOpenChange={setAddOpen}
+        onOpenChange={(v) => {
+          setAddOpen(v);
+          if (!v) setExpensePrefill(null);
+        }}
         members={members.data}
         meUid={user.uid}
-        isPremium={isPremium(userDoc.data?.premiumUntil)}
+        isPremium={isPremium}
+        prefill={expensePrefill}
       />
       <SettleSheet
         open={settleOpen}
