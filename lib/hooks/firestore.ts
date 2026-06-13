@@ -9,7 +9,7 @@ import {
   query,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import type { Expense, House, Member, Settlement } from "@/lib/firebase/schema";
+import type { Expense, House, Member, RecurringBill, Settlement, UserDoc } from "@/lib/firebase/schema";
 
 // §10.1 — every loading gate must have an error/timeout branch so one slow or
 // failed read can never become an infinite spinner.
@@ -159,4 +159,12 @@ export function useExpenses(houseId: string | null): ListState<Expense> {
 
 export function useSettlements(houseId: string | null): ListState<Settlement> {
   return useCollection<Settlement>(houseId, "settlements", "createdAt", "desc");
+}
+
+export function useUserDoc(uid: string | null): DocState<UserDoc> {
+  return useDoc<UserDoc>(uid ? ["users", uid] : null);
+}
+
+export function useRecurringBills(houseId: string | null): ListState<RecurringBill> {
+  return useCollection<RecurringBill>(houseId, "recurring_bills", "createdAt", "asc");
 }
