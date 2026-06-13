@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/field";
 import { Wordmark } from "@/components/ui/logo";
 import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
 
 type Mode = "signin" | "signup";
 
@@ -89,27 +90,76 @@ export default function AuthPage() {
       {/* Brand panel */}
       <aside className="relative hidden flex-col justify-between overflow-hidden bg-ink p-10 text-paper lg:flex">
         <div
-          className="absolute inset-0 opacity-90"
+          className="absolute inset-0"
           style={{
             background:
-              "radial-gradient(120% 90% at 15% 0%, rgba(224,138,35,0.35), transparent 55%), radial-gradient(90% 80% at 100% 100%, rgba(47,125,91,0.25), transparent 55%)",
+              "radial-gradient(120% 90% at 15% 0%, rgba(224,138,35,0.38), transparent 55%), radial-gradient(90% 80% at 100% 100%, rgba(47,125,91,0.28), transparent 55%)",
           }}
         />
+
         <Wordmark className="relative [&_*]:!text-paper" size="md" />
-        <div className="relative max-w-sm">
-          <h1 className="font-display text-5xl font-semibold leading-[1.05] tracking-tight">
-            Split the rent.
-            <br />
-            Settle the
-            <br />
-            kwarta.
-          </h1>
-          <p className="mt-5 text-base text-paper/65 leading-relaxed">
-            A shared ledger for boarding-house boardmates. Log expenses, see who
-            owes whom, and square up — no more awkward group-chat math.
-          </p>
+
+        {/* Hero text + decorative preview card */}
+        <div className="relative flex flex-col gap-8">
+          <div className="max-w-sm">
+            <h1 className="font-display text-5xl font-semibold leading-[1.05] tracking-tight">
+              Split the rent.
+              <br />
+              Settle the
+              <br />
+              kwarta.
+            </h1>
+            <p className="mt-4 text-base text-paper/60 leading-relaxed">
+              A shared ledger for boarding-house boardmates. Log expenses, see
+              who owes whom, and square up.
+            </p>
+          </div>
+
+          {/* Decorative mini balance card — mirrors landing page BalancePreview */}
+          <div
+            aria-hidden="true"
+            className="relative max-w-xs select-none overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm"
+          >
+            {/* Ambient credit glow */}
+            <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-credit opacity-20 blur-2xl" />
+
+            <p className="font-mono text-[10px] uppercase tracking-widest text-paper/45">
+              Your balance
+            </p>
+            <p className="tnum mt-1.5 font-display text-3xl font-semibold leading-none text-credit">
+              ₱2,450.00
+            </p>
+            <p className="mt-1 text-xs text-paper/40">
+              the house owes you, all in.
+            </p>
+
+            <div className="mt-4 flex flex-col">
+              {[
+                { initials: "MS", name: "Maria Santos", amt: "+₱800", color: "text-credit" },
+                { initials: "CR", name: "Carlo Reyes",  amt: "−₱350", color: "text-debit" },
+                { initials: "TL", name: "Tricia Lim",   amt: "₱0.00", color: "text-paper/35" },
+              ].map((m, i) => (
+                <div
+                  key={m.initials}
+                  className={cn(
+                    "flex items-center gap-2.5 py-2.5",
+                    i > 0 && "border-t border-white/8",
+                  )}
+                >
+                  <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gold-soft/15 text-[9px] font-semibold text-gold-soft">
+                    {m.initials}
+                  </span>
+                  <span className="flex-1 text-xs text-paper/70">{m.name}</span>
+                  <span className={cn("tnum shrink-0 text-xs font-semibold", m.color)}>
+                    {m.amt}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-        <div className="relative flex gap-6 font-mono text-xs uppercase tracking-widest text-paper/50">
+
+        <div className="relative flex gap-6 font-mono text-xs uppercase tracking-widest text-paper/45">
           <span>Track</span>
           <span>·</span>
           <span>Split</span>
@@ -119,7 +169,12 @@ export default function AuthPage() {
       </aside>
 
       {/* Form panel */}
-      <div className="flex items-center justify-center px-6 py-16">
+      <div className="relative flex items-center justify-center px-6 py-16">
+        {/* Warm ambient glow — echoes the landing page body gradient */}
+        <div
+          className="pointer-events-none absolute right-0 top-0 h-96 w-96 rounded-full opacity-[0.07] blur-3xl"
+          style={{ background: "var(--color-gold)" }}
+        />
         <div className="w-full max-w-sm">
           <div className="mb-10 lg:hidden">
             <Wordmark size="md" />

@@ -21,7 +21,7 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "KwartoKwarta — split the rent, settle the kwarta",
+  title: "KwartoKwarta — split the rent, settle the Kwarta",
   description:
     "A shared-expense ledger for boarding-house boardmates. Log expenses, see who owes whom, and settle up.",
 };

@@ -1,10 +1,12 @@
 import Link from "next/link";
 import {
-  Zap,
-  Users,
-  HandCoins,
-  WifiOff,
   ArrowRight,
+  Check,
+  HandCoins,
+  Sparkles,
+  Users,
+  WifiOff,
+  Zap,
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Wordmark } from "@/components/ui/logo";
@@ -274,6 +276,109 @@ export default function LandingPage() {
                 <p className="text-[15px] leading-relaxed text-muted">{f.desc}</p>
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* ── Pricing ─────────────────────────────────────────────────────── */}
+        <section className="border-y border-line bg-surface">
+          <div className="mx-auto max-w-6xl px-5 py-24 text-center sm:px-8 sm:py-32">
+            <p className="eyebrow">Pricing</p>
+            <h2 className="mt-4 font-display text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
+              Simple, honest pricing
+            </h2>
+            <p className="mx-auto mt-5 max-w-lg text-lg leading-relaxed text-muted">
+              Start free and split bills with your whole house. Upgrade when you
+              want budgets, AI receipts, and more.
+            </p>
+
+            <div className="mx-auto mt-14 grid max-w-3xl gap-6 sm:grid-cols-2">
+              {/* Free */}
+              <div className="flex flex-col gap-8 rounded-[1.5rem] border border-line bg-paper p-8 text-left sm:p-10">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-widest text-muted">Free</p>
+                  <p className="tnum mt-4 font-display font-semibold leading-none tracking-tight text-ink" style={{ fontSize: "clamp(3rem, 8vw, 4rem)" }}>
+                    ₱0
+                    <span className="font-sans text-xl font-normal text-muted"> /mo</span>
+                  </p>
+                  <p className="mt-4 text-base leading-relaxed text-muted">
+                    Everything you need to track shared bills and settle up cleanly.
+                  </p>
+                </div>
+                <ul className="flex flex-col gap-4">
+                  {[
+                    "Live balance tracking",
+                    "Shared expense ledger",
+                    "Simplified settlements",
+                    "Up to 10 boardmates",
+                    "Works offline",
+                  ].map((f) => (
+                    <li key={f} className="flex items-center gap-3 text-[15px] text-ink-soft">
+                      <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-credit/12 text-credit">
+                        <Check className="h-3.5 w-3.5" />
+                      </span>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href="/auth"
+                  className={cn(
+                    buttonVariants({ variant: "outline", size: "lg" }),
+                    "mt-auto w-full justify-center",
+                  )}
+                >
+                  Get started free
+                </Link>
+              </div>
+
+              {/* Premium */}
+              <div className="relative flex flex-col gap-8 rounded-[1.5rem] border-2 border-gold bg-ink p-8 text-left text-paper sm:p-10">
+                {/* Ambient glow */}
+                <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-gold opacity-20 blur-3xl" />
+                <div className="absolute -top-4 left-8">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-gold-deep px-4 py-1 text-xs font-bold uppercase tracking-wide text-white shadow-lift">
+                    <Sparkles className="h-3 w-3" />
+                    Most popular
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-widest text-paper/50">Premium</p>
+                  <p className="tnum relative mt-4 font-display font-semibold leading-none tracking-tight text-paper" style={{ fontSize: "clamp(3rem, 8vw, 4rem)" }}>
+                    ₱100
+                    <span className="font-sans text-xl font-normal text-paper/50"> /mo</span>
+                  </p>
+                  <p className="mt-4 text-base leading-relaxed text-paper/60">
+                    Unlock the full ledger — budgets, recurring bills, AI receipt
+                    scan, and CSV exports.
+                  </p>
+                </div>
+                <ul className="flex flex-col gap-4">
+                  {[
+                    "Everything in Free",
+                    "Monthly budget tracker",
+                    "Recurring bills list",
+                    "AI receipt scan",
+                    "CSV expense export",
+                  ].map((f) => (
+                    <li key={f} className="flex items-center gap-3 text-[15px] text-paper/80">
+                      <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gold/20 text-gold">
+                        <Check className="h-3.5 w-3.5" />
+                      </span>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href="/auth"
+                  className={cn(
+                    buttonVariants({ variant: "gold", size: "lg" }),
+                    "relative mt-auto w-full justify-center",
+                  )}
+                >
+                  Start with Premium
+                </Link>
+              </div>
+            </div>
           </div>
         </section>
 
